@@ -8,6 +8,7 @@ from setuptools import setup
 setup(name='createm4b',
       version='0.1.0',
       packages=['createm4b'],
+      install_requires=['eyeD3>=0.8', 'ffprobe>=0.5'],
       entry_points={
           'console_scripts': [
               'createm4b = createm4b.__main__:main'

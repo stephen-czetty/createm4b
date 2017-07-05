@@ -24,7 +24,7 @@ class RuntimeContext():
 
     @property
     def working_directory(self):
-        """Set the working directory"""
+        """Get the working directory"""
         return self.__working_directory
 
     @working_directory.setter
