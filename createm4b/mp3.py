@@ -6,7 +6,9 @@ import ffprobe
 class Mp3():
     """mp3 file"""
 
-    __file_name = ""
+    __file_name = None
+    __tag = None
+    __duration = None
 
     @property
     def title(self):
@@ -16,8 +18,11 @@ class Mp3():
     @property
     def duration(self):
         """Duration of the mp3, in seconds"""
-        file_scan = ffprobe.FFProbe(self.__file_name)
-        return file_scan.duration
+        if self.__duration is None:
+            file_scan = ffprobe.FFProbe(self.__file_name)
+            self.__duration = file_scan.duration
+
+        return self.__duration
 
     @property
     def file_name(self):
