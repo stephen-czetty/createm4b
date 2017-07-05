@@ -1,25 +1,35 @@
-"""Arguments parser"""
+"""Runtime Context"""
 
 import argparse
 
-class Arguments():
-    """Class for parsing the command line"""
-    _verbosity = 0
+class RuntimeContext():
+    """Class for storing context needed at runtime"""
+    __verbosity = 0
+    __working_directory = ""
 
     def print_unlessquiet(self, string):
         """Utility method to print unless --quiet is specified"""
-        if self._verbosity >= 0:
+        if self.__verbosity >= 0:
             print(string)
 
     def print_verbose(self, string):
         """Utility method to wrop check for verbosity"""
-        if self._verbosity > 0:
+        if self.__verbosity > 0:
             print(string)
 
     def print_veryverbose(self, string):
         """Utility method for higher verbose messages"""
-        if self._verbosity > 1:
+        if self.__verbosity > 1:
             print(string)
+
+    @property
+    def working_directory(self):
+        """Set the working directory"""
+        return self.__working_directory
+
+    @working_directory.setter
+    def working_directory(self, value):
+        self.__working_directory = value
 
     @staticmethod
     def __get_argument_parser():
@@ -34,4 +44,4 @@ class Arguments():
     def __init__(self, args):
         parser = self.__get_argument_parser()
         parsed = parser.parse_args(args)
-        self._verbosity = -1 if parsed.quiet else parsed.verbose
+        self.__verbosity = -1 if parsed.quiet else parsed.verbose
