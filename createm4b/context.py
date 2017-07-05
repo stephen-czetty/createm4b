@@ -1,8 +1,4 @@
 """Place for global context"""
+# pylint: disable=invalid-name
 
-def init():
-    """Create globals here"""
-    global verbosity
-    verbosity = 0
-    global working_dir
-    working_dir = ""
+working_dir = ""
