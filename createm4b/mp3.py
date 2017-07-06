@@ -3,7 +3,7 @@
 import eyed3.mp3 as mp3
 import ffprobe
 
-class Mp3():
+class Mp3:
     """mp3 file"""
 
     __file_name = None
