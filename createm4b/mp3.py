@@ -1,7 +1,7 @@
 """Class representing an mp3 file"""
 
-import eyed3.mp3 as mp3
-import ffprobe
+from eyed3 import mp3
+import ffprobe3
 
 class Mp3:
     """mp3 file"""
@@ -19,8 +19,8 @@ class Mp3:
     def duration(self):
         """Duration of the mp3, in seconds"""
         if self.__duration is None:
-            file_scan = ffprobe.FFProbe(self.__file_name)
-            self.__duration = file_scan.duration
+            file_scan = ffprobe3.FFProbe(self.__file_name)
+            self.__duration = file_scan.audio[0].duration
 
         return self.__duration
 

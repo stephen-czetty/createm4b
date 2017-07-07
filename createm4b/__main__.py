@@ -4,11 +4,12 @@ import sys
 import tempfile
 import shutil
 
-from . import runtime
+from .runtime import RuntimeContext
+from .book import Book
 
 def setup_environment(context):
     """Create environment for conversion"""
-    context.print_verbose("Creating environment for conversion")
+    context.print_unlessquiet("Creating environment for conversion")
 
     # Create a tempdir to work in
     context.working_directory = tempfile.mkdtemp()
@@ -24,8 +25,13 @@ def main(args=None):
     if args is None:
         args = sys.argv[1:]
 
-    context = runtime.RuntimeContext(args)
+    context = RuntimeContext(args)
     setup_environment(context)
+    book = Book(context.input_files)
+
+    context.print_verbose("Input file durations:")
+    for mp3 in book.mp3_list:
+        context.print_verbose("{0} (duration: {1})".format(mp3.title, mp3.duration))
 
 if __name__ == "__main__":
     main()
