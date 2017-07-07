@@ -1,6 +1,6 @@
 """Class representing an mp3 file"""
 
-from eyed3 import mp3
+from eyed3.mp3 import isMp3File, Mp3AudioFile
 import ffprobe3
 
 class Mp3:
@@ -30,8 +30,8 @@ class Mp3:
         return self.__file_name
 
     def __init__(self, file_name):
-        if not mp3.isMp3File(file_name):
+        if not isMp3File(file_name):
             raise Exception("{0} is not an mp3 file!".format(file_name))
 
         self.__file_name = file_name
-        self.__tag = mp3.Mp3AudioFile(file_name).tag
+        self.__tag = Mp3AudioFile(file_name).tag
