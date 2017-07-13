@@ -35,5 +35,7 @@ def main(args=None):
     for mp3 in book.mp3_list:
         context.print_verbose("{0} (duration: {1})".format(mp3.title, mp3.duration))
 
+    book.convert(context.output_file)
+
 if __name__ == "__main__":
     main()
