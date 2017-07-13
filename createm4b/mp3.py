@@ -3,6 +3,7 @@
 from eyed3.mp3 import isMp3File, Mp3AudioFile
 import ffprobe3
 
+
 class Mp3:
     """mp3 file"""
 

@@ -7,6 +7,7 @@ import shutil
 from .runtime import RuntimeContext
 from .book import Book
 
+
 def setup_environment(context):
     """Create environment for conversion"""
     context.print_unlessquiet("Creating environment for conversion")
@@ -19,6 +20,7 @@ def setup_environment(context):
     context.print_veryverbose("Cleaning up: {0}".format(context.working_directory))
     shutil.rmtree(context.working_directory)
 
+
 def main(args=None):
     """Main entry point"""
 
@@ -27,7 +29,7 @@ def main(args=None):
 
     context = RuntimeContext(args)
     setup_environment(context)
-    book = Book(context.input_files)
+    book = Book(context.input_files, context.cover_image)
 
     context.print_verbose("Input file durations:")
     for mp3 in book.mp3_list:
@@ -35,4 +37,3 @@ def main(args=None):
 
 if __name__ == "__main__":
     main()
-    

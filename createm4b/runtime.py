@@ -2,6 +2,7 @@
 
 import argparse
 
+
 class RuntimeContext:
     """Class for storing context needed at runtime"""
     __verbosity = 0

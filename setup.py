@@ -14,4 +14,4 @@ setup(name='createm4b',
               'createm4b = createm4b.__main__:main'
           ]
       },
-     )
+      )
