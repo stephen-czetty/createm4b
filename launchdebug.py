@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from createm4b import __main__
 
 
