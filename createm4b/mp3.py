@@ -64,6 +64,7 @@ class Mp3(AudioSource):
     @staticmethod
     def is_valid(file_path):
         f = None
+        # noinspection PyBroadException
         try:
             f = open(file_path, 'rb')
             block = f.read(1024)
@@ -164,6 +165,8 @@ class Mp3(AudioSource):
                     block = f.read(1024)
                     if len(block) <= offset or block[offset] != 255:
                         return False
+        except:
+            return False
 
         finally:
             if f is not None:

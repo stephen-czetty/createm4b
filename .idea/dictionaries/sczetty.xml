@@ -2,7 +2,9 @@
   <dictionary name="sczetty">
     <words>
       <w>bitrate</w>
+      <w>flac</w>
       <w>mpeg</w>
+      <w>vorbis</w>
     </words>
   </dictionary>
 </component>
