@@ -32,7 +32,7 @@ def main(args=None):
     book = Book(context.input_files, context.cover_image)
 
     context.print_verbose("Input file durations:")
-    for mp3 in book.mp3_list:
+    for mp3 in book.audio_list:
         context.print_verbose("{0} (duration: {1})".format(mp3.title, mp3.duration))
 
     book.convert(context.output_file)

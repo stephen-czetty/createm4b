@@ -3,8 +3,10 @@
 from eyed3.mp3 import isMp3File, Mp3AudioFile
 import ffprobe3
 
+from .audiosource import AudioSource
 
-class Mp3:
+
+class Mp3(AudioSource):
     """mp3 file"""
 
     __file_name = None
