@@ -65,9 +65,9 @@ class RuntimeContext:
         group.add_argument("-q", "--quiet", help="be very quiet", action="store_true")
         parser.add_argument("-c", "--cover", help="path to cover image", default=None, type=argparse.FileType())
         parser.add_argument("-o", "--output", help="output filename", required=True,
-                            type=argparse.FileType("w"))
+                            type=argparse.FileType("wb"))
         parser.add_argument("input_files", metavar="file", help="input file(s)", nargs="+",
-                            type=argparse.FileType())
+                            type=argparse.FileType("rb"))
 
         return parser
 
@@ -81,7 +81,8 @@ class RuntimeContext:
 
         self.print_veryverbose("Command line arguments:")
         self.print_veryverbose("Verbosity: {0}".format(self.verbosity))
-        self.print_veryverbose("Cover Image: {0}".format(self.cover_image.name))
+        if self.cover_image is not None:
+            self.print_veryverbose("Cover Image: {0}".format(self.cover_image.name))
         self.print_veryverbose("Input files:")
         for file in self.input_files:
             self.print_veryverbose("\t{0}".format(file.name))
