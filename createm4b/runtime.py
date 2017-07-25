@@ -1,6 +1,7 @@
 """Runtime Context"""
 
 import argparse
+from os import path
 
 
 class RuntimeContext:
@@ -17,7 +18,7 @@ class RuntimeContext:
             print(string)
 
     def print_verbose(self, string):
-        """Utility method to wrop check for verbosity"""
+        """Utility method to wrap check for verbosity"""
         if self.__verbosity > 0:
             print(string)
 
@@ -75,17 +76,23 @@ class RuntimeContext:
         parser = self.__get_argument_parser()
         parsed = parser.parse_args(args)
         self.__verbosity = -1 if parsed.quiet else parsed.verbose
-        self.__cover_image = parsed.cover
-        self.__input_files = parsed.input_files
-        self.__output_file = parsed.output
+        if parsed.cover is not None:
+            self.__cover_image = path.realpath(parsed.cover.name)
+            parsed.cover.close()
+        self.__input_files = []
+        for i in parsed.input_files:
+            self.__input_files.append(path.realpath(i.name))
+            i.close()
+        self.__output_file = path.realpath(parsed.output.name)
+        parsed.output.close()
 
         self.print_veryverbose("Command line arguments:")
         self.print_veryverbose("Verbosity: {0}".format(self.verbosity))
         if self.cover_image is not None:
-            self.print_veryverbose("Cover Image: {0}".format(self.cover_image.name))
+            self.print_veryverbose("Cover Image: {0}".format(self.cover_image))
         self.print_veryverbose("Input files:")
         for file in self.input_files:
-            self.print_veryverbose("\t{0}".format(file.name))
-        self.print_veryverbose("Output file: {0}".format(self.output_file.name))
+            self.print_veryverbose("\t{0}".format(file))
+        self.print_veryverbose("Output file: {0}".format(self.output_file))
         self.print_veryverbose("=============================================================")
         self.print_veryverbose("")
