@@ -1,4 +1,5 @@
 """Class representing an mp3 file"""
+from abc import ABC, abstractmethod
 
 from eyed3.mp3 import Mp3AudioFile
 import io
@@ -64,7 +65,7 @@ class Mp3(AudioSource):
             f = open(file_path, 'rb')
 
             # Skip over any id3 block, if it exists
-            Mp3.__read_id3(f)
+            Mp3.__read_id3(f, True)
 
             try:
                 block = f.read(4)
@@ -74,7 +75,7 @@ class Mp3(AudioSource):
                 f.seek(frame.frame_length - 4, io.SEEK_CUR)
                 block = f.read(4)
                 Mp3Frame(block)
-            except Mp3Exception:
+            except Mp3Error:
                 return False
         finally:
             if f is not None:
@@ -83,27 +84,24 @@ class Mp3(AudioSource):
         return True
 
     @staticmethod
-    def __read_id3(file_handle):
+    def __read_id3(file_handle, skip_v1=False):
         block = file_handle.read(10)
 
-        id3 = ID3Header(block)
+        id3 = ID3v2(block)
         if id3.is_valid_id3:
             file_handle.seek(id3.size, io.SEEK_CUR)
-        else:
-            file_handle.seek(-10, io.SEEK_CUR)
+            return id3
 
-        # Check for an id3v1 tag, and skip it or use it as the info if there's no v2 header.
-        block = file_handle.read(3)
-        try:
-            if block.decode("ascii") == "TAG":
-                block.extend(file_handle.read(125))
-                if id3.is_valid_id3:
-                    return id3
-                    # TODO: Parse id3v1, return that.
-        except UnicodeDecodeError:
-            pass
+        if skip_v1:
+            return id3
 
-        file_handle.seek(-3, io.SEEK_CUR)
+        # Check for an id3v1 tag
+        current_file_position = file_handle.tell() - 10
+        file_handle.seek(-128, io.SEEK_END)
+        block = file_handle.read(128)
+        id3 = ID3v1(block)
+
+        file_handle.seek(current_file_position, io.SEEK_SET)
         return id3
 
 
@@ -161,10 +159,10 @@ class Mp3Frame:
     def __init__(self, data):
         frame_hdr = data[0:4]
         if frame_hdr[0] != 255:
-            raise Mp3Exception("Invalid Frame Sync")
+            raise Mp3Error("Invalid Frame Sync")
 
         if frame_hdr[1] & 0xe0 != 0xe0:  # validate the rest of the frame_sync bits exist
-            raise Mp3Exception("Invalid Frame Sync")
+            raise Mp3Error("Invalid Frame Sync")
 
         version_id = (frame_hdr[1] & 0x18) >> 3
         if version_id == 0:
@@ -177,7 +175,7 @@ class Mp3Frame:
             self.__mpeg_version = '1'
             self.__version_index = 0
         else:
-            raise Mp3Exception("Unknown MPEG version")
+            raise Mp3Error("Unknown MPEG version")
 
         layer_description = (frame_hdr[1] & 6) >> 1
         if layer_description == 1:
@@ -190,11 +188,11 @@ class Mp3Frame:
             self.__layer_desc = 'Layer I'
             self.__layer_index = 0
         else:
-            raise Mp3Exception("Unknown MPEG Layer")
+            raise Mp3Error("Unknown MPEG Layer")
 
         bitrate_index = frame_hdr[2] >> 4
         if bitrate_index == 15:
-            raise Mp3Exception("Unknown bitrate")
+            raise Mp3Error("Unknown bitrate")
 
         # if mpeg_version == '1':
         #     if layer_desc == 'Layer I':
@@ -214,11 +212,11 @@ class Mp3Frame:
 
         self.__bitrate = Mp3Frame.__bitrate_chart[bitrate_index][bitrate_col]
         if self.__bitrate <= 0:
-            raise Mp3Exception("Invalid bitrate")
+            raise Mp3Error("Invalid bitrate")
 
         sample_rate_index = (frame_hdr[2] & 0xc) >> 2
         if sample_rate_index == 3:
-            raise Mp3Exception("Invalid sample rate")
+            raise Mp3Error("Invalid sample rate")
 
         self.__sample_rate = Mp3Frame.__sample_rate_chart[sample_rate_index][self.__version_index]
 
@@ -232,8 +230,78 @@ class Mp3Frame:
             self.__frame_length = int(144 * self.__bitrate * 1000 / self.__sample_rate + padding_length)
 
 
-class ID3Header:
+class ID3(ABC):
+    @property
+    @abstractmethod
+    def is_valid_id3(self):
+        pass
+
+    @property
+    @abstractmethod
+    def title(self):
+        pass
+
+    @property
+    @abstractmethod
+    def artist(self):
+        pass
+
+    @property
+    @abstractmethod
+    def album(self):
+        pass
+
+    @property
+    @abstractmethod
+    def year(self):
+        pass
+
+    @property
+    @abstractmethod
+    def comment(self):
+        pass
+
+    @property
+    @abstractmethod
+    def track(self):
+        pass
+
+    @property
+    @abstractmethod
+    def genre(self):
+        pass
+
+
+class ID3v2(ID3):
     __id3_size = 0
+
+    @property
+    def album(self):
+        pass
+
+    @property
+    def genre(self):
+        pass
+
+    @property
+    def track(self):
+        pass
+
+    @property
+    def year(self):
+        pass
+
+    @property
+    def comment(self):
+        pass
+
+    @property
+    def title(self):
+        pass
+
+    @property
+    def artist(self):
+        pass
 
     @property
     def is_valid_id3(self):
@@ -247,9 +315,66 @@ class ID3Header:
         if data[0:3].decode("ascii") != "ID3":
             self.__is_id3 = False
             return
-        self.__is_id3 = True
+
         self.__id3_size = data[6] << 21 | data[7] << 14 | data[8] << 7 | data[9]
+        flags = data[5]
+        # noinspection SpellCheckingInspection
+        self.__unsynchronisation = flags & 0x80 == 0x80
+        self.__extended_header = flags & 0x40 == 0x40
+        self.__experimental = flags & 0x20 == 0x20
+        self.__is_id3 = flags & 0x1f == 0
 
 
-class Mp3Exception(Exception):
+class ID3v1(ID3):
+    __is_id3 = False
+
+    @property
+    def album(self):
+        return self.__album
+
+    @property
+    def genre(self):
+        return self.__genre
+
+    @property
+    def track(self):
+        return self.__track
+
+    @property
+    def year(self):
+        return self.__year
+
+    @property
+    def comment(self):
+        return self.__comment
+
+    @property
+    def title(self):
+        return self.__title
+
+    @property
+    def artist(self):
+        return self.__artist
+
+    @property
+    def is_valid_id3(self):
+        return self.__is_id3
+
+    def __init__(self, data):
+        try:
+            if data[0:3].decode("ascii") == "TAG":
+                self.__is_id3 = True
+        except UnicodeDecodeError:
+            return
+
+        self.__title = data[3:30].decode("ascii")
+        self.__artist = data[33:63].decode("ascii")
+        self.__album = data[63:93].decode("ascii")
+        self.__year = int(data[93:97].decode("ascii"))
+        self.__comment = data[97:127].decode("ascii")
+        self.__track = int(data[127]) if data[126] == 0 else None  # id3v1.1
+        self.__genre = int(data[128])
+
+
+class Mp3Error(Exception):
     pass

@@ -4,3 +4,5 @@ build/
 dist/
 *.pyc
 *~
+*.m4a
+*.m4b

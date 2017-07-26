@@ -32,7 +32,7 @@ class Flac(AudioSource):
 
     def __init__(self, file_name):
         if not Flac.is_valid(file_name):
-            raise FlacException("{0} is not a flac file".format(file_name))
+            raise FlacError("{0} is not a flac file".format(file_name))
 
         self.__file_name = file_name
         self.__metadata = [f for f in Flac.get_metadata(file_name)]
@@ -50,19 +50,20 @@ class Flac(AudioSource):
 
             return True
 
-        except FlacException:
+        except FlacError:
             return False
 
     @staticmethod
     def get_metadata(file_name):
         f = None
 
+        # TODO: This will fail with large metadata blocks.  The spec allows for block sizes of up to 17mb!
         try:
             f = open(file_name, "rb")
             block = f.read(1024)
 
             if block[0:4].decode("ascii") != "fLaC":
-                raise FlacException
+                raise FlacError
 
             position = 4
             metadata_block = FlacMetadata.read_metadata(block[position:])
@@ -157,10 +158,12 @@ class FlacMetadataStreamInfo(FlacMetadata):
 
 
 class FlacMetadataVorbis(FlacMetadata):
+    __comments = None
+
     def validate(self):
         try:
-            self.__comments()
-        except FlacException:
+            self.__get_comments()
+        except FlacError:
             return False
         return True
 
@@ -170,9 +173,10 @@ class FlacMetadataVorbis(FlacMetadata):
 
     @property
     def comments(self):
-        return self.__comments()
+        self.__comments = self.__comments or [x for x in self.__get_comments()]
+        return self.__comments
 
-    def __comments(self):
+    def __get_comments(self):
         try:
             pos = 0
             vendor_length = util.parse_32bit_little_endian(self.raw_data[pos:])
@@ -185,7 +189,7 @@ class FlacMetadataVorbis(FlacMetadata):
                 yield self.raw_data[pos:pos + comment_length].decode("utf8")
                 pos += comment_length
         except LookupError:
-            raise FlacException
+            raise FlacError
 
     def tag(self, tag_name):
         tag = next((x for x in self.comments if x.startswith("{0}=".format(tag_name))), None)
@@ -207,5 +211,5 @@ class FlacMetadataGeneric(FlacMetadata):
         super().__init__(data)
 
 
-class FlacException(Exception):
+class FlacError(Exception):
     pass

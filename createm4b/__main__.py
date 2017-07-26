@@ -25,9 +25,7 @@ def cleanup(context):
 
 def main(args=None):
     """Main entry point"""
-
-    if args is None:
-        args = sys.argv[1:]
+    args = args or sys.argv[1:]
 
     context = RuntimeContext(args)
     try:
