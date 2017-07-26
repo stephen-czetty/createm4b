@@ -3,6 +3,7 @@
 import ffmpeg
 import tempfile
 import os
+import subprocess
 from shutil import copyfile
 from . import audiosourcefactory
 
@@ -22,6 +23,7 @@ class Book:
 
     def convert(self, output_file, context):
         """Convert the book to an m4b"""
+        context.print_unlessquiet("Converting book to {0}".format(output_file))
         (tfd, temp_name) = tempfile.mkstemp(suffix=".m4a", dir=context.working_directory)
         os.close(tfd)
 
@@ -40,7 +42,28 @@ class Book:
             .overwrite_output()
 
         context.print_verbose("ffmpeg arguments: {0}".format(o.get_args()))
-        o.run(cmd="../ffmpeg")
+        cmd = "../ffmpeg" if os.name == "nt" else "ffmpeg"
+        o.run(cmd=cmd)
+
+        # Rebuild with the cover image
+        if self.cover is not None:
+            context.print_unlessquiet("Adding cover image (this may take some time)")
+            (tfd, temp_name2) = tempfile.mkstemp(suffix=".m4a", dir=context.working_directory)
+            os.close(tfd)
+
+            args = [cmd, "-loop", "1", "-i", self.cover,
+                    "-i", temp_name,
+                    "-map", "0:0", "-map", "1:0",
+                    "-c:a", "copy",
+                    "-c:v", "libx264", "-tune", "stillimage", "-crf", "25", "-r", "1",
+                    "-strict", "experimental",
+                    "-threads", "3",
+                    "-shortest", "-y", temp_name2]
+            context.print_verbose("ffmpeg arguments: {0}".format(args))
+            stdout = None if context.verbosity > 1 else subprocess.DEVNULL
+            subprocess.run(args, stdout=stdout)
+
+            temp_name = temp_name2
 
         copyfile(temp_name, output_file)
 
