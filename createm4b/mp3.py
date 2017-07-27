@@ -1,8 +1,10 @@
-"""Class representing an mp3 file"""
+"""MP3 file handling"""
 from abc import ABC, abstractmethod
 
 from eyed3.mp3 import Mp3AudioFile
 import io
+
+from createm4b import util
 from .audiosource import AudioSource
 
 
@@ -60,6 +62,7 @@ class Mp3(AudioSource):
     @staticmethod
     def is_valid(file_path):
         f = None
+
         # noinspection PyBroadException
         try:
             f = open(file_path, 'rb')
@@ -85,18 +88,12 @@ class Mp3(AudioSource):
 
     @staticmethod
     def __read_id3(file_handle, skip_v1=False):
-        block = file_handle.read(10)
-
-        id3 = ID3v2(block)
-        if id3.is_valid_id3:
-            file_handle.seek(id3.size, io.SEEK_CUR)
-            return id3
-
-        if skip_v1:
+        id3 = ID3v2(file_handle)
+        if id3.is_valid_id3 or skip_v1:
             return id3
 
         # Check for an id3v1 tag
-        current_file_position = file_handle.tell() - 10
+        current_file_position = file_handle.tell()
         file_handle.seek(-128, io.SEEK_END)
         block = file_handle.read(128)
         id3 = ID3v1(block)
@@ -258,7 +255,7 @@ class ID3(ABC):
 
     @property
     @abstractmethod
-    def comment(self):
+    def comments(self):
         pass
 
     @property
@@ -277,31 +274,31 @@ class ID3v2(ID3):
 
     @property
     def album(self):
-        pass
+        return self.__album
 
     @property
     def genre(self):
-        pass
+        return self.__genre
 
     @property
     def track(self):
-        pass
+        return self.__track
 
     @property
     def year(self):
-        pass
+        return self.__year
 
     @property
-    def comment(self):
-        pass
+    def comments(self):
+        return self.__comments
 
     @property
     def title(self):
-        pass
+        return self.__title
 
     @property
     def artist(self):
-        pass
+        return self.__artist
 
     @property
     def is_valid_id3(self):
@@ -311,18 +308,125 @@ class ID3v2(ID3):
     def size(self):
         return self.__id3_size
 
-    def __init__(self, data):
+    def __parse_id3_data(self):
+        if self.__unsynchronisation:
+            raise Mp3Error("Unsynchronisation bit is not supported.")
+
+        position = 0
+        self.__comments = {}
+        d = self.__data
+        if self.__extended_header:
+            # Skip the extended header.
+            size = util.parse_32bit_little_endian(d[0:4])
+            position += 4 + size
+
+        tag_size = 3 if self.__id3_version == 2 else 4
+
+        while position < self.__id3_size:
+            if self.__id3_size - position < 6:
+                break
+
+            # Read a frame header
+            frame_type = d[position:position + tag_size].decode("ascii")
+            raw_frame_size = d[position + tag_size:position + (tag_size * 2)]
+            frame_size = util.parse_32bit_little_endian(raw_frame_size) if self.__id3_version > 2 \
+                else (raw_frame_size[0] << 24 | raw_frame_size[1] << 16 | raw_frame_size[2])
+            frame_flags = d[position + 8:position + 10] if self.__id3_version > 2 else b"\0\0"
+
+            position += 6 if self.__id3_version == 2 else 10
+            if ((not frame_type.startswith("T"))
+                    and frame_type != "COMM"
+                    and frame_type != "COM")\
+                    or frame_flags[1] & 0xc0 > 0:
+                # Not a frame we care about, or encrypted, or compressed
+                position += frame_size
+                continue
+
+            data_size = frame_size - 1
+
+            if frame_flags[1] & 0x20 > 0:
+                # Group number is appended to the frame header, skip it.
+                position += 1
+                data_size -= 1
+
+            # Text encoding byte
+            encoding = d[position]
+            position += 1
+
+            language = None
+            if frame_type == "COMM" or frame_type == "COM":
+                language = d[position:position+3].decode("ascii")
+                position += 3
+                data_size -= 3
+
+            decoded_text = ID3v2.__decode_id3_text(d[position:position + data_size], encoding)
+            if frame_type == "TALB" or frame_type == "TAL":
+                self.__album = decoded_text
+            elif frame_type == "TIT2" or frame_type == "TT2":
+                self.__title = decoded_text
+            elif frame_type == "TPE1" or frame_type == "TP1":
+                self.__artist = decoded_text
+            elif frame_type == "TYE":
+                self.__year = decoded_text
+            elif frame_type == "TDRC":
+                self.__year = decoded_text[0:4]
+            elif frame_type == "TRCK" or frame_type == "TRK":
+                self.__track = decoded_text.split("/")[0]
+            elif frame_type == "TCON" or frame_type == "TCO":
+                self.__genre = ID3v2.__decode_genre(decoded_text)
+            elif frame_type == "COMM" or frame_type == "COM":
+                if language.lower() == "eng":
+                    comments = decoded_text.split("\0")
+                    self.__comments[comments[0]] = comments[1]
+
+            position += data_size
+
+    @staticmethod
+    def __decode_genre(genre_text):
+        if genre_text[0] == "(":
+            # Version 2 format
+            if genre_text[1] == "(":
+                # escaped paren
+                return genre_text[1:]
+            close_paren = genre_text.find(")")
+            numeric_genre = int(genre_text[1:close_paren])
+            if len(genre_text[close_paren + 1:]) > 0 and (genre_text[close_paren + 1] != "("
+                                                          or genre_text[close_paren + 1:close_paren + 2] == "(("):
+                return genre_text[close_paren + 1:]
+            return str(numeric_genre)
+
+        genres = genre_text.split("\0")
+        if len(genres) > 1:
+            return genres[1]
+        return genres[0]
+
+    @staticmethod
+    def __decode_id3_text(data, encoding):
+        return data.decode(ID3v2.__get_encoding(encoding))[:-1]
+
+    @staticmethod
+    def __get_encoding(encoding):
+        if encoding == 0:
+            return "ascii"
+        if encoding == 3:
+            return "utf-8"
+        return "utf-16"
+
+    def __init__(self, file_handle):
+        data = file_handle.read(10)
         if data[0:3].decode("ascii") != "ID3":
             self.__is_id3 = False
             return
 
         self.__id3_size = data[6] << 21 | data[7] << 14 | data[8] << 7 | data[9]
         flags = data[5]
-        # noinspection SpellCheckingInspection
+        self.__id3_version = int(data[3])
         self.__unsynchronisation = flags & 0x80 == 0x80
         self.__extended_header = flags & 0x40 == 0x40
         self.__experimental = flags & 0x20 == 0x20
         self.__is_id3 = flags & 0x1f == 0
+        self.__data = file_handle.read(self.__id3_size)
+        self.__parse_id3_data()
 
 
 class ID3v1(ID3):
@@ -345,8 +449,8 @@ class ID3v1(ID3):
         return self.__year
 
     @property
-    def comment(self):
-        return self.__comment
+    def comments(self):
+        return self.__comments
 
     @property
     def title(self):
@@ -367,13 +471,14 @@ class ID3v1(ID3):
         except UnicodeDecodeError:
             return
 
+        self.__comments = {}
         self.__title = data[3:30].decode("ascii")
         self.__artist = data[33:63].decode("ascii")
         self.__album = data[63:93].decode("ascii")
         self.__year = int(data[93:97].decode("ascii"))
-        self.__comment = data[97:127].decode("ascii")
+        self.__comments["id3v1"] = data[97:127].decode("ascii")
         self.__track = int(data[127]) if data[126] == 0 else None  # id3v1.1
-        self.__genre = int(data[128])
+        self.__genre = str(int(data[128]))
 
 
 class Mp3Error(Exception):
