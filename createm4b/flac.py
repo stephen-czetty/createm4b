@@ -60,22 +60,17 @@ class Flac(AudioSource):
         # TODO: This will fail with large metadata blocks.  The spec allows for block sizes of up to 17mb!
         try:
             f = open(file_name, "rb")
-            block = f.read(1024)
+            block = f.read(4)
 
-            if block[0:4].decode("ascii") != "fLaC":
+            if block.decode("ascii") != "fLaC":
                 raise FlacError
 
-            position = 4
-            metadata_block = FlacMetadata.read_metadata(block[position:])
+            metadata_block = FlacMetadata.read_metadata(f)
 
             yield metadata_block
 
             while not metadata_block.last_block:
-                if metadata_block.block_size + position > len(block):
-                    position -= len(block)
-                    block = f.read(metadata_block.block_size + 1024)
-                position += metadata_block.block_size
-                metadata_block = FlacMetadata.read_metadata(block[position:])
+                metadata_block = FlacMetadata.read_metadata(f)
                 yield metadata_block
 
         finally:
@@ -105,20 +100,22 @@ class FlacMetadata(ABC):
     def validate(self):
         pass
 
-    def __init__(self, data):
+    def __init__(self, file_handle):
+        data = file_handle.read(4)
         self.__last_block = data[0] & 0x80 == 0x80
         self.__block_size = (data[1] << 16 | data[2] << 8 | data[3]) + 4
-        self.__data = data[4:self.__block_size]
+        self.__data = data + file_handle.read(self.__block_size-4)
 
     @staticmethod
-    def read_metadata(data):
+    def read_metadata(file_handle):
+        data = file_handle.peek(1)
         block_type = data[0] & 0x7f
 
         if block_type == 0:
-            return FlacMetadataStreamInfo(data)
+            return FlacMetadataStreamInfo(file_handle)
         if block_type == 4:
-            return FlacMetadataVorbis(data)
-        return FlacMetadataGeneric(data)
+            return FlacMetadataVorbis(file_handle)
+        return FlacMetadataGeneric(file_handle)
 
 
 class FlacMetadataStreamInfo(FlacMetadata):
@@ -144,17 +141,18 @@ class FlacMetadataStreamInfo(FlacMetadata):
 
         return True
 
-    def __init__(self, data):
-        super().__init__(data)
-        self.__minimum_block_size = data[4] << 8 | data[5]
-        self.__maximum_block_size = data[6] << 8 | data[7]
-        self.__minimum_frame_size = data[8] << 16 | data[9] << 8 | data[10]
-        self.__maximum_frame_size = data[11] << 16 | data[12] << 8 | data[13]
-        self.__sample_rate = data[14] << 12 | data[15] << 4 | (data[16] & 0xf0) >> 4
-        self.__number_of_channels = ((data[16] & 0x0e) >> 1) + 1
-        self.__bits_per_sample = ((data[16] & 0x01) << 4 | (data[17] & 0xf0) >> 4) + 1
-        self.__total_samples = (data[17] & 0x0f) << 32 | data[18] << 24 | data[19] << 16 | data[20] << 8 | data[21]
-        self.__signature = data[22:38]
+    def __init__(self, file_handle):
+        super().__init__(file_handle)
+        self.__minimum_block_size = self.raw_data[4] << 8 | self.raw_data[5]
+        self.__maximum_block_size = self.raw_data[6] << 8 | self.raw_data[7]
+        self.__minimum_frame_size = self.raw_data[8] << 16 | self.raw_data[9] << 8 | self.raw_data[10]
+        self.__maximum_frame_size = self.raw_data[11] << 16 | self.raw_data[12] << 8 | self.raw_data[13]
+        self.__sample_rate = self.raw_data[14] << 12 | self.raw_data[15] << 4 | (self.raw_data[16] & 0xf0) >> 4
+        self.__number_of_channels = ((self.raw_data[16] & 0x0e) >> 1) + 1
+        self.__bits_per_sample = ((self.raw_data[16] & 0x01) << 4 | (self.raw_data[17] & 0xf0) >> 4) + 1
+        self.__total_samples = (self.raw_data[17] & 0x0f) << 32 | self.raw_data[18] << 24 | self.raw_data[19] << 16 |\
+            self.raw_data[20] << 8 | self.raw_data[21]
+        self.__signature = self.raw_data[22:38]
 
 
 class FlacMetadataVorbis(FlacMetadata):
@@ -178,7 +176,7 @@ class FlacMetadataVorbis(FlacMetadata):
 
     def __get_comments(self):
         try:
-            pos = 0
+            pos = 4
             vendor_length = util.parse_32bit_little_endian(self.raw_data[pos:])
             pos += vendor_length + 4
             comment_count = util.parse_32bit_little_endian(self.raw_data[pos:])
@@ -195,8 +193,8 @@ class FlacMetadataVorbis(FlacMetadata):
         tag = next((x for x in self.comments if x.startswith("{0}=".format(tag_name))), None)
         return tag[len(tag_name) + 1:] if tag is not None else None
 
-    def __init__(self, data):
-        super().__init__(data)
+    def __init__(self, file_handle):
+        super().__init__(file_handle)
 
 
 class FlacMetadataGeneric(FlacMetadata):
@@ -207,8 +205,8 @@ class FlacMetadataGeneric(FlacMetadata):
     def block_type(self):
         return "Unknown"
 
-    def __init__(self, data):
-        super().__init__(data)
+    def __init__(self, file_handle):
+        super().__init__(file_handle)
 
 
 class FlacError(Exception):
