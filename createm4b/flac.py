@@ -7,6 +7,8 @@ from .audiosource import AudioSource
 
 class Flac(AudioSource):
     __title = None
+    __artist = None
+    __album = None
 
     @property
     def duration(self):
@@ -21,11 +23,27 @@ class Flac(AudioSource):
     @property
     def title(self):
         if self.__title is None:
-            comment_block = next((self.metadata("VorbisComment")), None)
-            if comment_block is not None:
-                self.__title = comment_block.tag("TITLE")
+            self.__title = self.__get_tag("TITLE")
 
         return self.__title
+
+    @property
+    def artist(self):
+        if self.__artist is None:
+            self.__artist = self.__get_tag("ARTIST")
+
+        return self.__artist
+
+    @property
+    def album(self):
+        if self.__album is None:
+            self.__album = self.__get_tag("ALBUM")
+
+        return self.__album
+
+    def __get_tag(self, name):
+        comment_block = next((self.metadata("VorbisComment")), None)
+        return comment_block.tag(name) if comment_block is not None else None
 
     def metadata(self, block_type):
         return (x for x in self.__metadata if x.block_type == block_type)

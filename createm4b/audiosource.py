@@ -19,3 +19,13 @@ class AudioSource(ABC):
     def file_name(self):
         pass
 
+    @property
+    @abstractmethod
+    def artist(self):
+        pass
+
+    @property
+    @abstractmethod
+    def album(self):
+        pass
+

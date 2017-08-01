@@ -22,6 +22,14 @@ class Mp3(AudioSource):
         return self.__tag.title
 
     @property
+    def artist(self):
+        return self.__tag.album_artist
+
+    @property
+    def album(self):
+        return self.__tag.album
+
+    @property
     def duration(self):
         """Duration of the mp3, in seconds"""
         if self.__duration is None:
