@@ -9,6 +9,7 @@ class Flac(AudioSource):
     __title = None
     __artist = None
     __album = None
+    __track = None
 
     @property
     def duration(self):
@@ -40,6 +41,17 @@ class Flac(AudioSource):
             self.__album = self.__get_tag("ALBUM")
 
         return self.__album
+
+    @property
+    def track(self):
+        if self.__track is None:
+            try:
+                # noinspection SpellCheckingInspection
+                self.__track = int(self.__get_tag("TRACKNUMBER"))
+            except (ValueError, TypeError):
+                self.__track = 0
+
+        return self.__track
 
     def __get_tag(self, name):
         comment_block = next((self.metadata("VorbisComment")), None)

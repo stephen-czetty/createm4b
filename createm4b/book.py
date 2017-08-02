@@ -23,7 +23,7 @@ class Book:
 
     def convert(self, output_file, context):
         """Convert the book to an m4b"""
-        context.print_unlessquiet("Converting book to {0}".format(output_file))
+        context.print_unlessquiet("Converting book to {0}...".format(output_file))
         (tfd, temp_name) = tempfile.mkstemp(suffix=".m4a", dir=context.working_directory)
         os.close(tfd)
 
@@ -48,13 +48,15 @@ class Book:
         # Rebuild with the metadata and (optional) cover image
         metadata_file = self.__create_metadata_file(context)
 
+        context.print_unlessquiet("Adding metadata and chapter information...")
         (tfd, temp_name2) = tempfile.mkstemp(suffix=".m4a", dir=context.working_directory)
         os.close(tfd)
         args = [cmd, "-i", temp_name, "-i", metadata_file]
 
         if self.cover is not None:
-            context.print_unlessquiet("Adding cover image (this may take some time)")
+            context.print_unlessquiet("Adding cover image (this may take some time)...")
 
+            # noinspection SpellCheckingInspection
             args.extend(["-loop", "1", "-i", self.cover,
                          "-map", "2:0",
                          "-c:v", "libx264", "-tune", "stillimage", "-crf", "25", "-r", "1",
@@ -97,6 +99,8 @@ class Book:
 
         return s
 
-    def __init__(self, input_files, cover_image=None):
+    def __init__(self, input_files, cover_image=None, sort=False):
         self.__audio_list = [audiosourcefactory.get_audio_source(file) for file in input_files]
+        if sort and self.__audio_list[0].track is not None:
+            self.__audio_list = sorted(self.__audio_list, key=lambda a: a.track if a.track is not None else 0)
         self.__cover = cover_image

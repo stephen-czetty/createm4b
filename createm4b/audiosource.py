@@ -29,3 +29,7 @@ class AudioSource(ABC):
     def album(self):
         pass
 
+    @property
+    @abstractmethod
+    def track(self):
+        pass

@@ -1,7 +1,5 @@
 """MP3 file handling"""
 from abc import ABC, abstractmethod
-
-from eyed3.mp3 import Mp3AudioFile
 import io
 
 from createm4b import util
@@ -12,22 +10,25 @@ class Mp3(AudioSource):
     """mp3 file"""
 
     __file_name = None
-    __tag = None
     __duration = None
     __id3 = None
 
     @property
     def title(self):
         """Title of the mp3 from id3 tag"""
-        return self.__tag.title
+        return self.tags.title
 
     @property
     def artist(self):
-        return self.__tag.album_artist
+        return self.tags.artist
 
     @property
     def album(self):
-        return self.__tag.album
+        return self.tags.album
+
+    @property
+    def track(self):
+        return self.tags.track
 
     @property
     def duration(self):
@@ -37,7 +38,7 @@ class Mp3(AudioSource):
             if self.__id3 is None:
                 self.__id3 = Mp3.__read_id3(f)
             else:
-                f.seek(self.__id3.size)
+                f.seek(self.__id3.size + 10)
 
             duration = 0.0
             data = f.read(4)
@@ -65,7 +66,6 @@ class Mp3(AudioSource):
 
     def __init__(self, file_name):
         self.__file_name = file_name
-        self.__tag = Mp3AudioFile(file_name).tag
 
     @staticmethod
     def is_valid(file_path):
@@ -316,6 +316,7 @@ class ID3v2(ID3):
     def size(self):
         return self.__id3_size
 
+    # noinspection SpellCheckingInspection
     def __parse_id3_data(self):
         if self.__unsynchronisation:
             raise Mp3Error("Unsynchronisation bit is not supported.")
@@ -379,7 +380,10 @@ class ID3v2(ID3):
             elif frame_type == "TDRC":
                 self.__year = decoded_text[0:4]
             elif frame_type == "TRCK" or frame_type == "TRK":
-                self.__track = decoded_text.split("/")[0]
+                try:
+                    self.__track = int(decoded_text.split("/")[0])
+                except ValueError:
+                    self.__track = 0
             elif frame_type == "TCON" or frame_type == "TCO":
                 self.__genre = ID3v2.__decode_genre(decoded_text)
             elif frame_type == "COMM" or frame_type == "COM":

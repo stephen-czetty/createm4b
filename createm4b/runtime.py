@@ -56,6 +56,10 @@ class RuntimeContext:
         """Get the output file name"""
         return self.__output_file
 
+    @property
+    def sort(self):
+        return self.__sort
+
     @staticmethod
     def __get_argument_parser():
         """Builds up an argparse.ArgumentParser"""
@@ -67,6 +71,7 @@ class RuntimeContext:
         parser.add_argument("-c", "--cover", help="path to cover image", default=None, type=argparse.FileType())
         parser.add_argument("-o", "--output", help="output filename", required=True,
                             type=argparse.FileType("wb"))
+        parser.add_argument("-s", "--sort", help="sort using file metadata", action="store_true")
         parser.add_argument("input_files", metavar="file", help="input file(s)", nargs="+",
                             type=argparse.FileType("rb"))
 
@@ -79,6 +84,7 @@ class RuntimeContext:
         if parsed.cover is not None:
             self.__cover_image = path.realpath(parsed.cover.name)
             parsed.cover.close()
+        self.__sort = parsed.sort
         self.__input_files = []
         for i in parsed.input_files:
             self.__input_files.append(path.realpath(i.name))

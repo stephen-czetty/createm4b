@@ -30,7 +30,7 @@ def main(args=None):
     context = RuntimeContext(args)
     try:
         setup_environment(context)
-        book = Book(context.input_files, context.cover_image)
+        book = Book(context.input_files, context.cover_image, context.sort)
 
         context.print_veryverbose("Input file durations (this may take some time):")
         if context.verbosity > 1:
