@@ -73,6 +73,7 @@ class Book:
 
     def __create_metadata_file(self, context):
         (fd, metadata_file) = tempfile.mkstemp(suffix=".txt", dir=context.working_directory)
+        # noinspection SpellCheckingInspection
         os.write(fd, ";FFMETADATA1\n".encode("utf8"))
         os.write(fd, "album={0}\n".format(Book.__metadata_escape(self.audio_list[0].album)).encode("utf8"))
         os.write(fd, "album_artist={0}\n".format(Book.__metadata_escape(self.audio_list[0].artist)).encode("utf8"))

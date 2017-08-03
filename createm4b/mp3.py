@@ -65,6 +65,8 @@ class Mp3(AudioSource):
         return self.__id3
 
     def __init__(self, file_name):
+        if not Mp3.is_valid(file_name):
+            raise Mp3Error("file is not an mp3 file")
         self.__file_name = file_name
 
     @staticmethod

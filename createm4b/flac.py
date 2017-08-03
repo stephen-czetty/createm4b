@@ -87,7 +87,6 @@ class Flac(AudioSource):
     def get_metadata(file_name):
         f = None
 
-        # TODO: This will fail with large metadata blocks.  The spec allows for block sizes of up to 17mb!
         try:
             f = open(file_name, "rb")
             block = f.read(4)
