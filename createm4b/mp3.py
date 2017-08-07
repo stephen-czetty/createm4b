@@ -7,6 +7,53 @@ from .audiosource import AudioSource
 from .filevalidator import FileValidator
 
 
+class ID3Base(ABC):
+    @property
+    @abstractmethod
+    def is_valid_id3(self) -> bool:
+        pass
+
+    @property
+    @abstractmethod
+    def title(self) -> str:
+        pass
+
+    @property
+    @abstractmethod
+    def artist(self) -> str:
+        pass
+
+    @property
+    @abstractmethod
+    def album(self) -> str:
+        pass
+
+    @property
+    @abstractmethod
+    def year(self) -> int:
+        pass
+
+    @property
+    @abstractmethod
+    def comments(self) -> str:
+        pass
+
+    @property
+    @abstractmethod
+    def track(self) -> (int, None):
+        pass
+
+    @property
+    @abstractmethod
+    def genre(self) -> str:
+        pass
+
+    @property
+    @abstractmethod
+    def size(self) -> int:
+        pass
+
+
 class Mp3(AudioSource):
     """mp3 file"""
 
@@ -15,24 +62,24 @@ class Mp3(AudioSource):
     __id3 = None
 
     @property
-    def title(self):
+    def title(self) -> str:
         """Title of the mp3 from id3 tag"""
         return self.tags.title
 
     @property
-    def artist(self):
+    def artist(self) -> str:
         return self.tags.artist
 
     @property
-    def album(self):
+    def album(self) -> str:
         return self.tags.album
 
     @property
-    def track(self):
+    def track(self) -> int:
         return self.tags.track
 
     @property
-    def duration(self):
+    def duration(self) -> float:
         """Duration of the mp3, in seconds"""
         if self.__duration is None:
             f = open(self.__file_name, 'rb')
@@ -53,26 +100,26 @@ class Mp3(AudioSource):
         return self.__duration
 
     @property
-    def file_name(self):
+    def file_name(self) -> str:
         """File name this class is working with"""
         return self.__file_name
 
     @property
-    def tags(self):
+    def tags(self) -> ID3Base:
         if self.__id3 is None:
             f = open(self.__file_name, 'rb')
             self.__id3 = ID3.read_id3(f)
 
         return self.__id3
 
-    def __init__(self, mp3_validator, file_name):
+    def __init__(self, mp3_validator: FileValidator, file_name: str):
         if not mp3_validator.is_valid(file_name):
             raise Mp3Error("file is not an mp3 file")
         self.__file_name = file_name
 
 
 class Mp3Validator(FileValidator):
-    def is_valid(self, file_path):
+    def is_valid(self, file_path: str) -> bool:
         f = None
 
         # noinspection PyBroadException
@@ -131,26 +178,26 @@ class Mp3Frame:
     ]
 
     @property
-    def frame_length(self):
+    def frame_length(self) -> int:
         return self.__frame_length
 
     @property
-    def sample_rate(self):
+    def sample_rate(self) -> int:
         return self.__sample_rate
 
     @property
-    def bitrate(self):
+    def bitrate(self) -> int:
         return self.__bitrate
 
     @property
-    def samples(self):
+    def samples(self) -> int:
         return Mp3Frame.__sample_count_chart[self.__version_index][self.__layer_index]
 
     @property
-    def frame_duration(self):
+    def frame_duration(self) -> float:
         return float(self.samples) / self.sample_rate
 
-    def __init__(self, data):
+    def __init__(self, data: bytes):
         frame_hdr = data[0:4]
         if frame_hdr[0] != 255:
             raise Mp3Error("Invalid Frame Sync")
@@ -224,51 +271,9 @@ class Mp3Frame:
             self.__frame_length = int(144 * self.__bitrate * 1000 / self.__sample_rate + padding_length)
 
 
-class ID3Base(ABC):
-    @property
-    @abstractmethod
-    def is_valid_id3(self):
-        pass
-
-    @property
-    @abstractmethod
-    def title(self):
-        pass
-
-    @property
-    @abstractmethod
-    def artist(self):
-        pass
-
-    @property
-    @abstractmethod
-    def album(self):
-        pass
-
-    @property
-    @abstractmethod
-    def year(self):
-        pass
-
-    @property
-    @abstractmethod
-    def comments(self):
-        pass
-
-    @property
-    @abstractmethod
-    def track(self):
-        pass
-
-    @property
-    @abstractmethod
-    def genre(self):
-        pass
-
-
 class ID3:
     @staticmethod
-    def read_id3(file_handle, skip_v1=False):
+    def read_id3(file_handle: io.FileIO, skip_v1: bool=False) -> ID3Base:
         id3 = ID3v2(file_handle)
         if id3.is_valid_id3 or skip_v1:
             return id3
@@ -287,39 +292,39 @@ class ID3v2(ID3Base):
     __id3_size = 0
 
     @property
-    def album(self):
+    def album(self) -> str:
         return self.__album
 
     @property
-    def genre(self):
+    def genre(self) -> str:
         return self.__genre
 
     @property
-    def track(self):
+    def track(self) -> (int, None):
         return self.__track
 
     @property
-    def year(self):
+    def year(self) -> int:
         return self.__year
 
     @property
-    def comments(self):
+    def comments(self) -> dict:
         return self.__comments
 
     @property
-    def title(self):
+    def title(self) -> str:
         return self.__title
 
     @property
-    def artist(self):
+    def artist(self) -> str:
         return self.__artist
 
     @property
-    def is_valid_id3(self):
+    def is_valid_id3(self) -> bool:
         return self.__is_id3
 
     @property
-    def size(self):
+    def size(self) -> int:
         return self.__id3_size
 
     # noinspection SpellCheckingInspection
@@ -382,9 +387,15 @@ class ID3v2(ID3Base):
             elif frame_type == "TPE1" or frame_type == "TP1":
                 self.__artist = decoded_text
             elif frame_type == "TYE":
-                self.__year = decoded_text
+                try:
+                    self.__year = int(decoded_text)
+                except ValueError:
+                    self.__year = 0
             elif frame_type == "TDRC":
-                self.__year = decoded_text[0:4]
+                try:
+                    self.__year = int(decoded_text[0:4])
+                except ValueError:
+                    self.__year = 0
             elif frame_type == "TRCK" or frame_type == "TRK":
                 try:
                     self.__track = int(decoded_text.split("/")[0])
@@ -400,7 +411,7 @@ class ID3v2(ID3Base):
             position += data_size
 
     @staticmethod
-    def __decode_genre(genre_text):
+    def __decode_genre(genre_text: str) -> str:
         if genre_text[0] == "(":
             # Version 2 format
             if genre_text[1] == "(":
@@ -419,18 +430,18 @@ class ID3v2(ID3Base):
         return genres[0]
 
     @staticmethod
-    def __decode_id3_text(data, encoding):
+    def __decode_id3_text(data: bytes, encoding: int) -> str:
         return data.decode(ID3v2.__get_encoding(encoding))[:-1]
 
     @staticmethod
-    def __get_encoding(encoding):
+    def __get_encoding(encoding: int) -> str:
         if encoding == 0:
             return "ascii"
         if encoding == 3:
             return "utf-8"
         return "utf-16"
 
-    def __init__(self, file_handle):
+    def __init__(self, file_handle: io.FileIO):
         data = file_handle.read(10)
         if data[0:3].decode("ascii") != "ID3":
             self.__is_id3 = False
@@ -451,38 +462,42 @@ class ID3v1(ID3Base):
     __is_id3 = False
 
     @property
-    def album(self):
+    def album(self) -> str:
         return self.__album
 
     @property
-    def genre(self):
+    def genre(self) -> str:
         return self.__genre
 
     @property
-    def track(self):
+    def track(self) -> (int, None):
         return self.__track
 
     @property
-    def year(self):
+    def year(self) -> int:
         return self.__year
 
     @property
-    def comments(self):
+    def comments(self) -> dict:
         return self.__comments
 
     @property
-    def title(self):
+    def title(self) -> str:
         return self.__title
 
     @property
-    def artist(self):
+    def artist(self) -> str:
         return self.__artist
 
     @property
-    def is_valid_id3(self):
+    def is_valid_id3(self) -> bool:
         return self.__is_id3
 
-    def __init__(self, data):
+    @property
+    def size(self) -> int:
+        return 0
+
+    def __init__(self, data: bytes):
         try:
             if data[0:3].decode("ascii") == "TAG":
                 self.__is_id3 = True

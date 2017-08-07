@@ -3,33 +3,33 @@
 from abc import ABC, abstractmethod
 
 
-class AudioSource(ABC):
+class AudioSource(ABC):  # pragma: no cover
     @property
     @abstractmethod
-    def title(self):
+    def title(self) -> str:
         pass
 
     @property
     @abstractmethod
-    def duration(self):
+    def duration(self) -> float:
         pass
 
     @property
     @abstractmethod
-    def file_name(self):
+    def file_name(self) -> str:
         pass
 
     @property
     @abstractmethod
-    def artist(self):
+    def artist(self) -> str:
         pass
 
     @property
     @abstractmethod
-    def album(self):
+    def album(self) -> str:
         pass
 
     @property
     @abstractmethod
-    def track(self):
+    def track(self) -> int:
         pass
