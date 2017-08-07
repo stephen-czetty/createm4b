@@ -3,11 +3,16 @@ from .flac import Flac
 from .mp3 import Mp3
 
 
-def get_audio_source(file_name):
-    # TODO: Mp3.is_valid gets called twice, once here, once in Mp3.__init__.
-    if Mp3.is_valid(file_name):
-        return Mp3(file_name)
-    if Flac.is_valid(file_name):
-        return Flac(file_name)
+class AudioSourceFactory:
+    def get_audio_source(self, file_name):
+        # TODO: Mp3.is_valid gets called twice, once here, once in Mp3.__init__.
+        if self.__mp3_validator.is_valid(file_name):
+            return Mp3(self.__mp3_validator, file_name)
+        if self.__flac_validator.is_valid(file_name):
+            return Flac(self.__flac_validator, file_name)
 
-    raise Exception("Error loading file {0}".format(file_name))
+        raise Exception("Error loading file {0}".format(file_name))
+
+    def __init__(self, mp3_validator, flac_validator):
+        self.__mp3_validator = mp3_validator
+        self.__flac_validator = flac_validator

@@ -4,6 +4,7 @@ import io
 
 from createm4b import util
 from .audiosource import AudioSource
+from .filevalidator import FileValidator
 
 
 class Mp3(AudioSource):
@@ -36,7 +37,7 @@ class Mp3(AudioSource):
         if self.__duration is None:
             f = open(self.__file_name, 'rb')
             if self.__id3 is None:
-                self.__id3 = Mp3.__read_id3(f)
+                self.__id3 = ID3.read_id3(f)
             else:
                 f.seek(self.__id3.size + 10)
 
@@ -60,17 +61,18 @@ class Mp3(AudioSource):
     def tags(self):
         if self.__id3 is None:
             f = open(self.__file_name, 'rb')
-            self.__id3 = Mp3.__read_id3(f)
+            self.__id3 = ID3.read_id3(f)
 
         return self.__id3
 
-    def __init__(self, file_name):
-        if not Mp3.is_valid(file_name):
+    def __init__(self, mp3_validator, file_name):
+        if not mp3_validator.is_valid(file_name):
             raise Mp3Error("file is not an mp3 file")
         self.__file_name = file_name
 
-    @staticmethod
-    def is_valid(file_path):
+
+class Mp3Validator(FileValidator):
+    def is_valid(self, file_path):
         f = None
 
         # noinspection PyBroadException
@@ -78,7 +80,7 @@ class Mp3(AudioSource):
             f = open(file_path, 'rb')
 
             # Skip over any id3 block, if it exists
-            Mp3.__read_id3(f, True)
+            ID3.read_id3(f, True)
 
             try:
                 block = f.read(4)
@@ -95,21 +97,6 @@ class Mp3(AudioSource):
                 f.close()
 
         return True
-
-    @staticmethod
-    def __read_id3(file_handle, skip_v1=False):
-        id3 = ID3v2(file_handle)
-        if id3.is_valid_id3 or skip_v1:
-            return id3
-
-        # Check for an id3v1 tag
-        current_file_position = file_handle.tell()
-        file_handle.seek(-128, io.SEEK_END)
-        block = file_handle.read(128)
-        id3 = ID3v1(block)
-
-        file_handle.seek(current_file_position, io.SEEK_SET)
-        return id3
 
 
 class Mp3Frame:
@@ -237,7 +224,7 @@ class Mp3Frame:
             self.__frame_length = int(144 * self.__bitrate * 1000 / self.__sample_rate + padding_length)
 
 
-class ID3(ABC):
+class ID3Base(ABC):
     @property
     @abstractmethod
     def is_valid_id3(self):
@@ -279,7 +266,24 @@ class ID3(ABC):
         pass
 
 
-class ID3v2(ID3):
+class ID3:
+    @staticmethod
+    def read_id3(file_handle, skip_v1=False):
+        id3 = ID3v2(file_handle)
+        if id3.is_valid_id3 or skip_v1:
+            return id3
+
+        # Check for an id3v1 tag
+        current_file_position = file_handle.tell()
+        file_handle.seek(-128, io.SEEK_END)
+        block = file_handle.read(128)
+        id3 = ID3v1(block)
+
+        file_handle.seek(current_file_position, io.SEEK_SET)
+        return id3
+
+
+class ID3v2(ID3Base):
     __id3_size = 0
 
     @property
@@ -443,7 +447,7 @@ class ID3v2(ID3):
         self.__parse_id3_data()
 
 
-class ID3v1(ID3):
+class ID3v1(ID3Base):
     __is_id3 = False
 
     @property

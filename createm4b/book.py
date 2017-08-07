@@ -5,7 +5,9 @@ import tempfile
 import os
 import subprocess
 from shutil import copyfile
-from . import audiosourcefactory
+from .audiosourcefactory import AudioSourceFactory
+from .mp3 import Mp3Validator
+from .flac import FlacValidator
 
 
 class Book:
@@ -21,6 +23,7 @@ class Book:
         """Get the filename for the cover image"""
         return self.__cover
 
+    # TODO: Figure out the ffmpeg arguments to do this in one pass
     def convert(self, output_file, context):
         """Convert the book to an m4b"""
         context.print_unlessquiet("Converting book to {0}...".format(output_file))
@@ -101,7 +104,8 @@ class Book:
         return s
 
     def __init__(self, input_files, cover_image=None, sort=False):
-        self.__audio_list = [audiosourcefactory.get_audio_source(file) for file in input_files]
+        factory = AudioSourceFactory(Mp3Validator(), FlacValidator())
+        self.__audio_list = [factory.get_audio_source(file) for file in input_files]
         if sort and self.__audio_list[0].track is not None:
             self.__audio_list = sorted(self.__audio_list, key=lambda a: a.track if a.track is not None else 0)
         self.__cover = cover_image

@@ -3,6 +3,7 @@
 from abc import ABC, abstractmethod
 from . import util
 from .audiosource import AudioSource
+from .filevalidator import FileValidator
 
 
 class Flac(AudioSource):
@@ -10,6 +11,7 @@ class Flac(AudioSource):
     __artist = None
     __album = None
     __track = None
+    __metadata = None
 
     @property
     def duration(self):
@@ -58,30 +60,15 @@ class Flac(AudioSource):
         return comment_block.tag(name) if comment_block is not None else None
 
     def metadata(self, block_type):
+        if self.__metadata is None:
+            self.__metadata = [f for f in Flac.get_metadata(self.__file_name)]
         return (x for x in self.__metadata if x.block_type == block_type)
 
-    def __init__(self, file_name):
-        if not Flac.is_valid(file_name):
+    def __init__(self, flac_validator, file_name):
+        if not flac_validator.is_valid(file_name):
             raise FlacError("{0} is not a flac file".format(file_name))
 
         self.__file_name = file_name
-        self.__metadata = [f for f in Flac.get_metadata(file_name)]
-
-    @staticmethod
-    def is_valid(file_name):
-        try:
-            metadata = [f for f in Flac.get_metadata(file_name)]
-            if metadata[0].block_type != "StreamInfo":
-                return False
-
-            for m in metadata:
-                if not m.validate():
-                    return False
-
-            return True
-
-        except FlacError:
-            return False
 
     @staticmethod
     def get_metadata(file_name):
@@ -105,6 +92,23 @@ class Flac(AudioSource):
         finally:
             if f is not None:
                 f.close()
+
+
+class FlacValidator(FileValidator):
+    def is_valid(self, file_name):
+        try:
+            metadata = [f for f in Flac.get_metadata(file_name)]
+            if metadata[0].block_type != "StreamInfo":
+                return False
+
+            for m in metadata:
+                if not m.validate():
+                    return False
+
+            return True
+
+        except FlacError:
+            return False
 
 
 class FlacMetadata(ABC):
