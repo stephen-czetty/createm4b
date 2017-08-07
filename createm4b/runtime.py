@@ -2,6 +2,7 @@
 
 import argparse
 from os import path
+from typing import List
 
 
 class RuntimeContext:
@@ -12,56 +13,56 @@ class RuntimeContext:
     __input_files = None
     __output_file = None
 
-    def print_unlessquiet(self, string):
+    def print_unlessquiet(self, string: str):
         """Utility method to print unless --quiet is specified"""
         if self.__verbosity >= 0:
             print(string)
 
-    def print_verbose(self, string):
+    def print_verbose(self, string: str):
         """Utility method to wrap check for verbosity"""
         if self.__verbosity > 0:
             print(string)
 
-    def print_veryverbose(self, string):
+    def print_veryverbose(self, string: str):
         """Utility method for higher verbose messages"""
         if self.__verbosity > 1:
             print(string)
 
     @property
-    def verbosity(self):
+    def verbosity(self) -> int:
         """Get the output verbosity"""
         return self.__verbosity
 
     @property
-    def working_directory(self):
+    def working_directory(self) -> str:
         """Get the working directory"""
         return self.__working_directory
 
     @working_directory.setter
-    def working_directory(self, value):
+    def working_directory(self, value: str):
         self.__working_directory = value
 
     @property
-    def cover_image(self):
+    def cover_image(self) -> str:
         """Get the filename for the cover image"""
         return self.__cover_image
 
     @property
-    def input_files(self):
+    def input_files(self) -> List[str]:
         """Get the list of input files"""
         return self.__input_files
 
     @property
-    def output_file(self):
+    def output_file(self) -> str:
         """Get the output file name"""
         return self.__output_file
 
     @property
-    def sort(self):
+    def sort(self) -> bool:
         return self.__sort
 
     @staticmethod
-    def __get_argument_parser():
+    def __get_argument_parser() -> argparse.ArgumentParser:
         """Builds up an argparse.ArgumentParser"""
         parser = argparse.ArgumentParser()
 

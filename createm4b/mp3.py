@@ -1,6 +1,7 @@
 """MP3 file handling"""
 from abc import ABC, abstractmethod
 import io
+from typing import Optional
 
 from createm4b import util
 from .audiosource import AudioSource
@@ -30,7 +31,7 @@ class ID3Base(ABC):
 
     @property
     @abstractmethod
-    def year(self) -> int:
+    def year(self) -> Optional[int]:
         pass
 
     @property
@@ -40,7 +41,7 @@ class ID3Base(ABC):
 
     @property
     @abstractmethod
-    def track(self) -> (int, None):
+    def track(self) -> Optional[int]:
         pass
 
     @property
@@ -81,23 +82,25 @@ class Mp3(AudioSource):
     @property
     def duration(self) -> float:
         """Duration of the mp3, in seconds"""
-        if self.__duration is None:
-            f = open(self.__file_name, 'rb')
-            if self.__id3 is None:
-                self.__id3 = ID3.read_id3(f)
-            else:
-                f.seek(self.__id3.size + 10)
-
-            duration = 0.0
-            data = f.read(4)
-            while len(data) == 4:
-                frame = Mp3Frame(data)
-                duration += frame.frame_duration
-                f.seek(frame.frame_length - 4, io.SEEK_CUR)
-                data = f.read(4)
-            self.__duration = duration
+        self.__duration = self.__duration or self.__get_duration()
 
         return self.__duration
+
+    def __get_duration(self):
+        f = open(self.__file_name, 'rb')
+        if self.__id3 is None:
+            self.__id3 = ID3.read_id3(f)
+        else:
+            f.seek(self.__id3.size + 10)
+
+        duration = 0.0
+        data = f.read(4)
+        while len(data) == 4:
+            frame = Mp3Frame(data)
+            duration += frame.frame_duration
+            f.seek(frame.frame_length - 4, io.SEEK_CUR)
+            data = f.read(4)
+        return duration
 
     @property
     def file_name(self) -> str:
@@ -106,11 +109,13 @@ class Mp3(AudioSource):
 
     @property
     def tags(self) -> ID3Base:
-        if self.__id3 is None:
-            f = open(self.__file_name, 'rb')
-            self.__id3 = ID3.read_id3(f)
+        self.__id3 = self.__id3 or self.__read_id3()
 
         return self.__id3
+
+    def __read_id3(self):
+        f = open(self.__file_name, 'rb')
+        return ID3.read_id3(f)
 
     def __init__(self, mp3_validator: FileValidator, file_name: str):
         if not mp3_validator.is_valid(file_name):
@@ -300,11 +305,11 @@ class ID3v2(ID3Base):
         return self.__genre
 
     @property
-    def track(self) -> (int, None):
+    def track(self) -> Optional[int]:
         return self.__track
 
     @property
-    def year(self) -> int:
+    def year(self) -> Optional[int]:
         return self.__year
 
     @property
@@ -390,17 +395,17 @@ class ID3v2(ID3Base):
                 try:
                     self.__year = int(decoded_text)
                 except ValueError:
-                    self.__year = 0
+                    self.__year = None
             elif frame_type == "TDRC":
                 try:
                     self.__year = int(decoded_text[0:4])
                 except ValueError:
-                    self.__year = 0
+                    self.__year = None
             elif frame_type == "TRCK" or frame_type == "TRK":
                 try:
                     self.__track = int(decoded_text.split("/")[0])
                 except ValueError:
-                    self.__track = 0
+                    self.__track = None
             elif frame_type == "TCON" or frame_type == "TCO":
                 self.__genre = ID3v2.__decode_genre(decoded_text)
             elif frame_type == "COMM" or frame_type == "COM":
@@ -470,11 +475,11 @@ class ID3v1(ID3Base):
         return self.__genre
 
     @property
-    def track(self) -> (int, None):
+    def track(self) -> Optional[int]:
         return self.__track
 
     @property
-    def year(self) -> int:
+    def year(self) -> Optional[int]:
         return self.__year
 
     @property

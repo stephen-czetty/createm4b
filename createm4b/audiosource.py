@@ -1,6 +1,7 @@
 """Abstract class representing a single audio source file"""
 
 from abc import ABC, abstractmethod
+from typing import Optional
 
 
 class AudioSource(ABC):  # pragma: no cover
@@ -31,5 +32,5 @@ class AudioSource(ABC):  # pragma: no cover
 
     @property
     @abstractmethod
-    def track(self) -> int:
+    def track(self) -> Optional[int]:
         pass

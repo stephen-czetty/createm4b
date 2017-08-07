@@ -1,10 +1,14 @@
 """Class for encapsulating a book to be created"""
+from typing import Iterator, List
 
 import ffmpeg
 import tempfile
 import os
 import subprocess
 from shutil import copyfile
+
+from .audiosource import AudioSource
+from .runtime import RuntimeContext
 from .audiosourcefactory import AudioSourceFactory
 from .mp3 import Mp3Validator
 from .flac import FlacValidator
@@ -14,17 +18,17 @@ class Book:
     """Class for encapsulating a book to be created"""
 
     @property
-    def audio_list(self):
+    def audio_list(self) -> List[AudioSource]:
         """Get list of mp3s associated with this book"""
         return self.__audio_list
 
     @property
-    def cover(self):
+    def cover(self) -> str:
         """Get the filename for the cover image"""
         return self.__cover
 
     # TODO: Figure out the ffmpeg arguments to do this in one pass
-    def convert(self, output_file, context):
+    def convert(self, output_file: str, context: RuntimeContext):
         """Convert the book to an m4b"""
         context.print_unlessquiet("Converting book to {0}...".format(output_file))
         (tfd, temp_name) = tempfile.mkstemp(suffix=".m4a", dir=context.working_directory)
@@ -74,7 +78,7 @@ class Book:
 
         copyfile(temp_name2, output_file)
 
-    def __create_metadata_file(self, context):
+    def __create_metadata_file(self, context: RuntimeContext) -> str:
         (fd, metadata_file) = tempfile.mkstemp(suffix=".txt", dir=context.working_directory)
         # noinspection SpellCheckingInspection
         os.write(fd, ";FFMETADATA1\n".encode("utf8"))
@@ -94,7 +98,7 @@ class Book:
         return metadata_file
 
     @staticmethod
-    def __metadata_escape(s):
+    def __metadata_escape(s: str) -> str:
         s = s.replace("\\", "\\\\")
         s = s.replace("=", "\\=")
         s = s.replace(";", "\\;")
@@ -103,7 +107,7 @@ class Book:
 
         return s
 
-    def __init__(self, input_files, cover_image=None, sort=False):
+    def __init__(self, input_files: Iterator[str], cover_image: str=None, sort: bool=False):
         factory = AudioSourceFactory(Mp3Validator(), FlacValidator())
         self.__audio_list = [factory.get_audio_source(file) for file in input_files]
         if sort and self.__audio_list[0].track is not None:

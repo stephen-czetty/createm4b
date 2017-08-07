@@ -1,9 +1,54 @@
 """Flac file support"""
 
 from abc import ABC, abstractmethod
+
+from typing import Iterator, Optional, List
+
+from io import FileIO
+
 from . import util
 from .audiosource import AudioSource
 from .filevalidator import FileValidator
+
+
+class FlacMetadata(ABC):
+    @property
+    @abstractmethod
+    def block_type(self) -> str:  # pragma: no cover
+        pass
+
+    @property
+    def block_size(self) -> int:
+        return self.__block_size
+
+    @property
+    def last_block(self) -> bool:
+        return self.__last_block
+
+    @property
+    def raw_data(self) -> bytes:
+        return self.__data
+
+    @abstractmethod
+    def validate(self) -> bool:  # pragma: no cover
+        pass
+
+    def __init__(self, file_handle):
+        data = file_handle.read(4)
+        self.__last_block = data[0] & 0x80 == 0x80
+        self.__block_size = (data[1] << 16 | data[2] << 8 | data[3]) + 4
+        self.__data = data + file_handle.read(self.__block_size-4)
+
+    @staticmethod
+    def read_metadata(file_handle):
+        data = file_handle.peek(1)
+        block_type = data[0] & 0x7f
+
+        if block_type == 0:
+            return FlacMetadataStreamInfo(file_handle)
+        if block_type == 4:
+            return FlacMetadataVorbis(file_handle)
+        return FlacMetadataGeneric(file_handle)
 
 
 class Flac(AudioSource):
@@ -14,64 +59,60 @@ class Flac(AudioSource):
     __metadata = None
 
     @property
-    def duration(self):
+    def duration(self) -> float:
         """Duration of the flac, in seconds"""
         stream_info = next(self.metadata("StreamInfo"))
         return float(stream_info.total_samples) / stream_info.sample_rate
 
     @property
-    def file_name(self):
+    def file_name(self) -> str:
         return self.__file_name
 
     @property
-    def title(self):
-        if self.__title is None:
-            self.__title = self.__get_tag("TITLE")
+    def title(self) -> str:
+        self.__title = self.__title or self.__get_tag("TITLE")
 
         return self.__title
 
     @property
-    def artist(self):
-        if self.__artist is None:
-            self.__artist = self.__get_tag("ARTIST")
+    def artist(self) -> str:
+        self.__artist = self.__artist or self.__get_tag("ARTIST")
 
         return self.__artist
 
     @property
-    def album(self):
-        if self.__album is None:
-            self.__album = self.__get_tag("ALBUM")
+    def album(self) -> str:
+        self.__album = self.__album or self.__get_tag("ALBUM")
 
         return self.__album
 
     @property
-    def track(self):
+    def track(self) -> Optional[int]:
         if self.__track is None:
             try:
                 # noinspection SpellCheckingInspection
                 self.__track = int(self.__get_tag("TRACKNUMBER"))
             except (ValueError, TypeError):
-                self.__track = 0
+                self.__track = None
 
         return self.__track
 
-    def __get_tag(self, name):
+    def __get_tag(self, name: str) -> Optional[str]:
         comment_block = next((self.metadata("VorbisComment")), None)
         return comment_block.tag(name) if comment_block is not None else None
 
-    def metadata(self, block_type):
-        if self.__metadata is None:
-            self.__metadata = [f for f in Flac.get_metadata(self.__file_name)]
+    def metadata(self, block_type: str) -> Iterator[FlacMetadata]:
+        self.__metadata = self.__metadata or [f for f in Flac.get_metadata(self.__file_name)]
         return (x for x in self.__metadata if x.block_type == block_type)
 
-    def __init__(self, flac_validator, file_name):
+    def __init__(self, flac_validator: FileValidator, file_name: str):
         if not flac_validator.is_valid(file_name):
             raise FlacError("{0} is not a flac file".format(file_name))
 
         self.__file_name = file_name
 
     @staticmethod
-    def get_metadata(file_name):
+    def get_metadata(file_name: str) -> Iterator[FlacMetadata]:
         f = None
 
         try:
@@ -95,7 +136,7 @@ class Flac(AudioSource):
 
 
 class FlacValidator(FileValidator):
-    def is_valid(self, file_name):
+    def is_valid(self, file_name: str) -> bool:
         try:
             metadata = [f for f in Flac.get_metadata(file_name)]
             if metadata[0].block_type != "StreamInfo":
@@ -111,60 +152,20 @@ class FlacValidator(FileValidator):
             return False
 
 
-class FlacMetadata(ABC):
-    @property
-    @abstractmethod
-    def block_type(self):
-        pass
-
-    @property
-    def block_size(self):
-        return self.__block_size
-
-    @property
-    def last_block(self):
-        return self.__last_block
-
-    @property
-    def raw_data(self):
-        return self.__data
-
-    @abstractmethod
-    def validate(self):
-        pass
-
-    def __init__(self, file_handle):
-        data = file_handle.read(4)
-        self.__last_block = data[0] & 0x80 == 0x80
-        self.__block_size = (data[1] << 16 | data[2] << 8 | data[3]) + 4
-        self.__data = data + file_handle.read(self.__block_size-4)
-
-    @staticmethod
-    def read_metadata(file_handle):
-        data = file_handle.peek(1)
-        block_type = data[0] & 0x7f
-
-        if block_type == 0:
-            return FlacMetadataStreamInfo(file_handle)
-        if block_type == 4:
-            return FlacMetadataVorbis(file_handle)
-        return FlacMetadataGeneric(file_handle)
-
-
 class FlacMetadataStreamInfo(FlacMetadata):
     @property
-    def block_type(self):
+    def block_type(self) -> str:
         return "StreamInfo"
 
     @property
-    def total_samples(self):
+    def total_samples(self) -> int:
         return self.__total_samples
 
     @property
-    def sample_rate(self):
+    def sample_rate(self) -> int:
         return self.__sample_rate
 
-    def validate(self):
+    def validate(self) -> bool:
         if self.__sample_rate == 0:
             return False
         if self.__number_of_channels < 1 or self.__number_of_channels > 8:
@@ -174,7 +175,7 @@ class FlacMetadataStreamInfo(FlacMetadata):
 
         return True
 
-    def __init__(self, file_handle):
+    def __init__(self, file_handle: FileIO):
         super().__init__(file_handle)
         self.__minimum_block_size = self.raw_data[4] << 8 | self.raw_data[5]
         self.__maximum_block_size = self.raw_data[6] << 8 | self.raw_data[7]
@@ -191,7 +192,7 @@ class FlacMetadataStreamInfo(FlacMetadata):
 class FlacMetadataVorbis(FlacMetadata):
     __comments = None
 
-    def validate(self):
+    def validate(self) -> bool:
         try:
             self.__get_comments()
         except FlacError:
@@ -199,15 +200,15 @@ class FlacMetadataVorbis(FlacMetadata):
         return True
 
     @property
-    def block_type(self):
+    def block_type(self) -> str:
         return "VorbisComment"
 
     @property
-    def comments(self):
+    def comments(self) -> List[str]:
         self.__comments = self.__comments or [x for x in self.__get_comments()]
         return self.__comments
 
-    def __get_comments(self):
+    def __get_comments(self) -> Iterator[str]:
         try:
             pos = 4
             vendor_length = util.parse_32bit_little_endian(self.raw_data[pos:])
@@ -222,7 +223,7 @@ class FlacMetadataVorbis(FlacMetadata):
         except LookupError:
             raise FlacError
 
-    def tag(self, tag_name):
+    def tag(self, tag_name: str) -> Optional[str]:
         tag = next((x for x in self.comments if x.startswith("{0}=".format(tag_name))), None)
         return tag[len(tag_name) + 1:] if tag is not None else None
 
@@ -231,14 +232,14 @@ class FlacMetadataVorbis(FlacMetadata):
 
 
 class FlacMetadataGeneric(FlacMetadata):
-    def validate(self):
+    def validate(self) -> bool:
         return True
 
     @property
-    def block_type(self):
+    def block_type(self) -> str:
         return "Unknown"
 
-    def __init__(self, file_handle):
+    def __init__(self, file_handle: FileIO):
         super().__init__(file_handle)
 
 
