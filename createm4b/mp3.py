@@ -1,7 +1,7 @@
 """MP3 file handling"""
 from abc import ABC, abstractmethod
 import io
-from typing import Optional
+from typing import Optional, Dict
 
 from createm4b import util
 from .audiosource import AudioSource
@@ -313,7 +313,7 @@ class ID3v2(ID3Base):
         return self.__year
 
     @property
-    def comments(self) -> dict:
+    def comments(self) -> Dict[str, str]:
         return self.__comments
 
     @property
@@ -483,7 +483,7 @@ class ID3v1(ID3Base):
         return self.__year
 
     @property
-    def comments(self) -> dict:
+    def comments(self) -> Dict[str, str]:
         return self.__comments
 
     @property
