@@ -1,9 +1,7 @@
 """Flac file support"""
 
 from abc import ABC, abstractmethod
-
-from typing import Iterator, Optional, List
-
+from typing import Iterator, Optional, List, cast
 from io import FileIO
 
 from . import util
@@ -52,16 +50,16 @@ class FlacMetadata(ABC):
 
 
 class Flac(AudioSource):
-    __title = None
-    __artist = None
-    __album = None
-    __track = None
-    __metadata = None
+    __title: Optional[str] = None
+    __artist: Optional[str] = None
+    __album: Optional[str] = None
+    __track: Optional[int] = None
+    __metadata: Optional[FlacMetadata] = None
 
     @property
     def duration(self) -> float:
         """Duration of the flac, in seconds"""
-        stream_info = next(self.metadata("StreamInfo"))
+        stream_info = cast(FlacMetadataStreamInfo, (self.metadata("StreamInfo")))
         return float(stream_info.total_samples) / stream_info.sample_rate
 
     @property
@@ -98,7 +96,7 @@ class Flac(AudioSource):
         return self.__track
 
     def __get_tag(self, name: str) -> Optional[str]:
-        comment_block = next((self.metadata("VorbisComment")), None)
+        comment_block = cast(Optional[FlacMetadataVorbis], next((self.metadata("VorbisComment")), None))
         return comment_block.tag(name) if comment_block is not None else None
 
     def metadata(self, block_type: str) -> Iterator[FlacMetadata]:
@@ -190,7 +188,7 @@ class FlacMetadataStreamInfo(FlacMetadata):
 
 
 class FlacMetadataVorbis(FlacMetadata):
-    __comments = None
+    __comments: Optional[List[str]] = None
 
     def validate(self) -> bool:
         try:

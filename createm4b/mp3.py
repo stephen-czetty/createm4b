@@ -1,7 +1,7 @@
 """MP3 file handling"""
 from abc import ABC, abstractmethod
-import io
-from typing import Optional, Dict
+from io import SEEK_CUR, SEEK_END, SEEK_SET, FileIO
+from typing import Optional, Dict, List
 
 from createm4b import util
 from .audiosource import AudioSource
@@ -58,9 +58,9 @@ class ID3Base(ABC):
 class Mp3(AudioSource):
     """mp3 file"""
 
-    __file_name = None
-    __duration = None
-    __id3 = None
+    __file_name: Optional[str] = None
+    __duration: Optional[float] = None
+    __id3: Optional[ID3Base] = None
 
     @property
     def title(self) -> str:
@@ -98,7 +98,7 @@ class Mp3(AudioSource):
         while len(data) == 4:
             frame = Mp3Frame(data)
             duration += frame.frame_duration
-            f.seek(frame.frame_length - 4, io.SEEK_CUR)
+            f.seek(frame.frame_length - 4, SEEK_CUR)
             data = f.read(4)
         return duration
 
@@ -139,7 +139,7 @@ class Mp3Validator(FileValidator):
                 frame = Mp3Frame(block)
 
                 # Verify the next frame
-                f.seek(frame.frame_length - 4, io.SEEK_CUR)
+                f.seek(frame.frame_length - 4, SEEK_CUR)
                 block = f.read(4)
                 Mp3Frame(block)
             except Mp3Error:
@@ -152,7 +152,7 @@ class Mp3Validator(FileValidator):
 
 
 class Mp3Frame:
-    __bitrate_chart = [
+    __bitrate_chart: List[List[int]] = [
         [0, 0, 0, 0, 0],
         [32, 32, 32, 32, 8],
         [64, 48, 40, 48, 16],
@@ -170,13 +170,13 @@ class Mp3Frame:
         [448, 384, 320, 256, 160]
     ]
 
-    __sample_rate_chart = [
+    __sample_rate_chart: List[List[int]] = [
         [44100, 22050, 11025],
         [48000, 24000, 12000],
         [32000, 16000, 8000]
     ]
 
-    __sample_count_chart = [
+    __sample_count_chart: List[List[int]] = [
         [384, 1152, 1152],
         [384, 1152, 576],
         [384, 1152, 576]
@@ -278,23 +278,23 @@ class Mp3Frame:
 
 class ID3:
     @staticmethod
-    def read_id3(file_handle: io.FileIO, skip_v1: bool=False) -> ID3Base:
+    def read_id3(file_handle: FileIO, skip_v1: bool=False) -> ID3Base:
         id3 = ID3v2(file_handle)
         if id3.is_valid_id3 or skip_v1:
             return id3
 
         # Check for an id3v1 tag
         current_file_position = file_handle.tell()
-        file_handle.seek(-128, io.SEEK_END)
+        file_handle.seek(-128, SEEK_END)
         block = file_handle.read(128)
         id3 = ID3v1(block)
 
-        file_handle.seek(current_file_position, io.SEEK_SET)
+        file_handle.seek(current_file_position, SEEK_SET)
         return id3
 
 
 class ID3v2(ID3Base):
-    __id3_size = 0
+    __id3_size: int = 0
 
     @property
     def album(self) -> str:
@@ -446,7 +446,7 @@ class ID3v2(ID3Base):
             return "utf-8"
         return "utf-16"
 
-    def __init__(self, file_handle: io.FileIO):
+    def __init__(self, file_handle: FileIO):
         data = file_handle.read(10)
         if data[0:3].decode("ascii") != "ID3":
             self.__is_id3 = False
@@ -464,7 +464,7 @@ class ID3v2(ID3Base):
 
 
 class ID3v1(ID3Base):
-    __is_id3 = False
+    __is_id3: bool = False
 
     @property
     def album(self) -> str:

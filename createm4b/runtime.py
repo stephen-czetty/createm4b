@@ -2,16 +2,12 @@
 
 import argparse
 from os import path
-from typing import List
+from typing import List, Optional
 
 
 class RuntimeContext:
     """Class for storing context needed at runtime"""
-    __verbosity = 0
-    __working_directory = None
-    __cover_image = None
-    __input_files = None
-    __output_file = None
+    __working_directory: Optional[str] = None
 
     def print_unlessquiet(self, string: str):
         """Utility method to print unless --quiet is specified"""
