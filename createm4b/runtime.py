@@ -74,7 +74,7 @@ class RuntimeContext:
 
         return parser
 
-    def __init__(self, args):
+    def __init__(self, args: List[str]):
         parser = self.__get_argument_parser()
         parsed = parser.parse_args(args)
         self.__verbosity = -1 if parsed.quiet else parsed.verbose

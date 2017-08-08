@@ -3,6 +3,7 @@
 import sys
 import tempfile
 import shutil
+from typing import Optional, List
 
 from .runtime import RuntimeContext
 from .book import Book
@@ -23,7 +24,7 @@ def cleanup(context):
     shutil.rmtree(context.working_directory)
 
 
-def main(args=None):
+def main(args: Optional[List[str]]=None):
     """Main entry point"""
     args = args or sys.argv[1:]
 
