@@ -1,5 +1,5 @@
 from createm4b.filevalidator import FileValidator
-from createm4b.flac import Flac
+from . import Flac, FlacError
 
 
 class FlacValidator(FileValidator):

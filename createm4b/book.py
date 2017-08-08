@@ -10,8 +10,8 @@ from shutil import copyfile
 from .audiosource import AudioSource
 from .runtime import RuntimeContext
 from .audiosourcefactory import AudioSourceFactory
-from .mp3.mp3validator import Mp3Validator
-from .flac.flacvalidator import FlacValidator
+from .mp3 import Mp3Validator
+from .flac import FlacValidator
 
 
 class Book:
