@@ -11,7 +11,7 @@ from .audiosource import AudioSource
 from .runtime import RuntimeContext
 from .audiosourcefactory import AudioSourceFactory
 from .mp3.mp3validator import Mp3Validator
-from .flac import FlacValidator
+from .flac.flacvalidator import FlacValidator
 
 
 class Book:

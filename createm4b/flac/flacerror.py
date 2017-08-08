@@ -1,0 +1,2 @@
+class FlacError(Exception):
+    pass
