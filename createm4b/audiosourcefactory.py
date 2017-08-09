@@ -18,3 +18,5 @@ class AudioSourceFactory:
     def __init__(self, mp3_validator: FileValidator, flac_validator: FileValidator):
         self.__mp3_validator = mp3_validator
         self.__flac_validator = flac_validator
+
+del Flac, Mp3, AudioSource, FileValidator

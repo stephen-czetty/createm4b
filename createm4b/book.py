@@ -113,3 +113,6 @@ class Book:
         if sort and self.__audio_list[0].track is not None:
             self.__audio_list = sorted(self.__audio_list, key=lambda a: a.track if a.track is not None else 0)
         self.__cover = cover_image
+
+del Iterator, List, ffmpeg, tempfile, os, subprocess, copyfile, AudioSource, RuntimeContext,\
+    AudioSourceFactory, Mp3Validator, FlacValidator

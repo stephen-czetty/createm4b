@@ -99,3 +99,5 @@ class RuntimeContext:
         self.print_veryverbose("Output file: {0}".format(self.output_file))
         self.print_veryverbose("=============================================================")
         self.print_veryverbose("")
+
+del argparse, path, List, Optional
