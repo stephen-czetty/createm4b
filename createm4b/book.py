@@ -73,7 +73,7 @@ class Book:
 
         args.extend(["-map_metadata", "1", "-map", "0:0", "-c:a", "copy", "-y", temp_name2])
         context.print_verbose("ffmpeg arguments: {0}".format(args))
-        stdout = None if context.verbosity > 1 else subprocess.DEVNULL
+        stdout = None if context.is_veryverbose else subprocess.DEVNULL
         subprocess.run(args, stdout=stdout)
 
         copyfile(temp_name2, output_file)

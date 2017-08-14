@@ -34,7 +34,7 @@ def main(args: Optional[List[str]]=None):
         book = Book(context.input_files, context.cover_image, context.sort)
 
         context.print_veryverbose("Input file durations (this may take some time):")
-        if context.verbosity > 1:
+        if context.is_veryverbose:
             for mp3 in book.audio_list:
                 context.print_veryverbose("{0} (duration: {1})".format(mp3.title, mp3.duration))
 

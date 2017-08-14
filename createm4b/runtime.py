@@ -25,9 +25,16 @@ class RuntimeContext:
             print(string)
 
     @property
-    def verbosity(self) -> int:
-        """Get the output verbosity"""
-        return self.__verbosity
+    def is_verbose(self) -> bool:
+        return self.__verbosity > 0
+
+    @property
+    def is_veryverbose(self) -> bool:
+        return self.__verbosity > 1
+
+    @property
+    def is_quiet(self) -> bool:
+        return self.__verbosity < 0
 
     @property
     def working_directory(self) -> str:
@@ -90,7 +97,9 @@ class RuntimeContext:
         parsed.output.close()
 
         self.print_veryverbose("Command line arguments:")
-        self.print_veryverbose("Verbosity: {0}".format(self.verbosity))
+        self.print_veryverbose("Verbosity: {0}".format("Very Verbose" if self.is_veryverbose else
+                                                       "Verbose" if self.is_verbose else
+                                                       "Quiet" if self.is_quiet else "Normal"))
         if self.cover_image is not None:
             self.print_veryverbose("Cover Image: {0}".format(self.cover_image))
         self.print_veryverbose("Input files:")
