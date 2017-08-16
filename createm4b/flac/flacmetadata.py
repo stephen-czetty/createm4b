@@ -119,7 +119,7 @@ class FlacMetadataVorbis(FlacMetadata):
             raise FlacError
 
     def tag(self, tag_name: str) -> Optional[str]:
-        tag = next((x for x in self.comments if x.startswith("{0}=".format(tag_name))), None)
+        tag = next((x for x in self.comments if x.lower().startswith("{0}=".format(tag_name.lower()))), None)
         return tag[len(tag_name) + 1:] if tag is not None else None
 
     def __init__(self, file_handle):
