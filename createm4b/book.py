@@ -1,5 +1,5 @@
 """Class for encapsulating a book to be created"""
-from typing import Iterator, List
+from typing import Iterator, List, Optional
 
 import ffmpeg
 import tempfile
@@ -98,7 +98,10 @@ class Book:
         return metadata_file
 
     @staticmethod
-    def __metadata_escape(s: str) -> str:
+    def __metadata_escape(s: Optional[str]) -> str:
+        if s is None:
+            return ""
+
         s = s.replace("\\", "\\\\")
         s = s.replace("=", "\\=")
         s = s.replace(";", "\\;")
