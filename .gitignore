@@ -6,3 +6,4 @@ dist/
 *~
 *.m4a
 *.m4b
+.vscode/
