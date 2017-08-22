@@ -1,7 +1,7 @@
 # createm4b
 
 This project is my totally over-engineered python application intended for
-combining multiple *.mp3 or *.flac audiobook files into a single *.m4b with
+combining multiple *.mp3* or *.flac* audiobook files into a single *.m4b* with
 embedded chapters.
 
 This is my first real python project, so there are probably a lot of weird
