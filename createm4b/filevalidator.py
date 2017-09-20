@@ -6,4 +6,5 @@ class FileValidator(ABC):  # pragma: no cover
     def is_valid(self, file_name: str) -> bool:
         pass
 
+
 del ABC, abstractmethod

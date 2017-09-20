@@ -35,4 +35,5 @@ class AudioSource(ABC):  # pragma: no cover
     def track(self) -> Optional[int]:
         pass
 
+
 del ABC, abstractmethod, Optional

@@ -42,5 +42,6 @@ def main(args: Optional[List[str]]=None):
     finally:
         cleanup(context)
 
+
 if __name__ == "__main__":
     main()
