@@ -54,7 +54,7 @@ class Flac(AudioSource):
 
     def __get_tag(self, name: str) -> Optional[str]:
         comment_block = cast(Optional[FlacMetadataVorbis], next((self.metadata("VorbisComment")), None))
-        return comment_block.tag(name) if comment_block is not None else None
+        return comment_block.tag(name) if comment_block else None
 
     def metadata(self, block_type: str) -> Iterator[FlacMetadata]:
         self.__metadata = self.__metadata or [f for f in Flac.get_metadata(self.__file_name)]
