@@ -29,5 +29,5 @@ more.
 ## Notes
 
 * This requires at least python 3.6, mainly due to the use of type hints.
-* I have included a windows binary for ffmpeg.  On other platforms, it is assumed that ffmpeg can be found in the path
+* Requires ffmpeg, which is available for most platforms.
 * Please file a bug if you see anything that's not "correct" python.  I am still learning!
